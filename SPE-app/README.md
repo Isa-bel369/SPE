@@ -1,16 +1,50 @@
-# React + Vite
+# SPE UMaT Student Chapter website
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + Vite site for the Society of Petroleum Engineers, University of Mines and Technology (Tarkwa) student chapter. Public pages follow the SPE KNUST-style layout (centered white canvas, navy heading, dual logos, group photo, and a floating “Join our channels” widget). Member tools cover dues, activity tracking, media, merit, and role-based admin.
 
-Currently, two official plugins are available:
+## Run locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+cd SPE-app
+npm install
+npm run dev
+```
 
-## React Compiler
+Open the local URL printed by Vite (usually `http://localhost:5173`).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Paystack
 
-## Expanding the Oxlint configuration
+Copy `.env.example` to `.env` and set:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+```
+VITE_PAYSTACK_PUBLIC_KEY=pk_test_your_key
+```
+
+Amounts are charged in GHS. Without a public key, **Pay with Paystack** still records a labelled demo payment in the browser so the flow can be reviewed. A live secret-key verification step should be added on a server before production.
+
+Also replace placeholder contact and social URLs in `.env` (`VITE_CONTACT_EMAIL`, `VITE_WHATSAPP_URL`, and related keys).
+
+## Demo logins
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Member | `member@speumat.edu.gh` | `demo-member` |
+| Communications Head | `comms@speumat.edu.gh` | `demo-comms` |
+| Organization Head | `org@speumat.edu.gh` | `demo-org` |
+| Technical Head | `tech@speumat.edu.gh` | `demo-tech` |
+
+Sample member attendance code: `24018321` (Ama Boateng). Organization can check this in from **Admin → Attendance desk**.
+
+## Pages
+
+- `/` Homepage: SPE intro, chapter overview, gallery, upcoming events, contact
+- `/about` Mission, vision, chapter story, membership benefits
+- `/membership` How to join
+- `/join-committee` Committee interest form
+- `/newsfile` Chapter news
+- `/media` Calendar, photos, YouTube/workshop recordings
+- `/dues` Membership and other payments (Paystack)
+- `/dashboard` Stats, QR/code, merit history, leaderboard
+- `/admin` Office-specific tools (news/media, events/attendance, members/merit)
+
+Chapter data (events, news, media, attendance, merit, payments) is stored in `localStorage` under `spe-umat-store-v1` so the demo works without a database.
