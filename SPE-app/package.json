@@ -3,21 +3,16 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "oxlint",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
-  },
-  "devDependencies": {
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7",
-    "@vitejs/plugin-react": "^6.1.1",
-    "oxlint": "^1.81.0",
-    "vite": "^8.3.0"
+    "dev": "npm run dev --workspace spe-app-frontend",
+    "build": "npm run build --workspace spe-app-frontend",
+    "lint": "npm run lint --workspace spe-app-frontend",
+    "preview": "npm run preview --workspace spe-app-frontend",
+    "dev:backend": "npm run dev --workspace spe-app-backend",
+    "start:backend": "npm run start --workspace spe-app-backend"
   }
 }
