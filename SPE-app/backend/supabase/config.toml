@@ -1,0 +1,31 @@
+project_id = "spe-umat-chapter"
+
+[api]
+enabled = true
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+major_version = 15
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed/seed.sql"]
+
+[functions.register_member]
+verify_jwt = false
+[functions.verify_email]
+verify_jwt = false
+[functions.resend_code]
+verify_jwt = false
+[functions.merit_lookup]
+verify_jwt = false
+[functions.start_check_in]
+verify_jwt = false
+[functions.check_in]
+verify_jwt = false
+[functions.submit_contact]
+verify_jwt = false
+[functions.send_contact_notification]
+verify_jwt = false
