@@ -1,36 +1,64 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { lazy, Suspense, useEffect, useRef } from 'react'
+import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
-import About from './pages/About'
-import Admin from './pages/Admin'
-import Dashboard from './pages/Dashboard'
-import Dues from './pages/Dues'
-import EventDetail from './pages/EventDetail'
+import ErrorBoundary from './components/ErrorBoundary'
+import { AppStateProvider } from './state/AppState'
+import { useCheckin, useRegistration } from './state/contexts'
 import Home from './pages/Home'
-import JoinCommittee from './pages/JoinCommittee'
-import Login from './pages/Login'
+import About from './pages/About'
+import Events from './pages/Events'
+import EventDetail from './pages/EventDetail'
+import News from './pages/News'
+import NewsDetail from './pages/NewsDetail'
 import Media from './pages/Media'
-import Membership from './pages/Membership'
-import Newsfile from './pages/Newsfile'
+import Leaderboard from './pages/Leaderboard'
+import Register from './pages/Register'
+import Verify from './pages/Verify'
+import RegisterSuccess from './pages/RegisterSuccess'
+import Merit from './pages/Merit'
+import Checkin from './pages/Checkin'
+import NotFound from './pages/NotFound'
+
+const AdminApp = lazy(() => import('./pages/admin/AdminApp'))
+
+function Loading() { return <main className="section" aria-live="polite">Loading…</main> }
+
+function FlowCleanup() {
+  const { pathname } = useLocation()
+  const previous = useRef(pathname)
+  const { setRegistration } = useRegistration()
+  const { setCheckin } = useCheckin()
+  useEffect(() => {
+    if (previous.current.startsWith('/register') && (!pathname.startsWith('/register') || previous.current === '/register/success' && pathname !== previous.current)) setRegistration({})
+    if (previous.current.startsWith('/checkin') && !pathname.startsWith('/checkin')) setCheckin(null)
+    previous.current = pathname
+  }, [pathname, setCheckin, setRegistration])
+  return null
+}
+
+function RoutedApp() {
+  return <><FlowCleanup /><Routes>
+    <Route element={<Layout />}>
+      <Route path="/" element={<Home />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/events" element={<Events />} />
+      <Route path="/events/:slug" element={<EventDetail />} />
+      <Route path="/news" element={<News />} />
+      <Route path="/news/:slug" element={<NewsDetail />} />
+      <Route path="/media" element={<Media />} />
+      <Route path="/leaderboard" element={<Leaderboard />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/register/verify" element={<Verify />} />
+      <Route path="/register/success" element={<RegisterSuccess />} />
+      <Route path="/merit" element={<Merit />} />
+      <Route path="/checkin/:eventToken" element={<Checkin />} />
+      <Route path="/checkin" element={<Checkin />} />
+      <Route path="/admin/*" element={<Suspense fallback={<Loading />}><AdminApp /></Suspense>} />
+      <Route path="*" element={<NotFound />} />
+    </Route>
+  </Routes></>
+}
 
 export default function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/membership" element={<Membership />} />
-          <Route path="/join-committee" element={<JoinCommittee />} />
-          <Route path="/newsfile" element={<Newsfile />} />
-          <Route path="/media" element={<Media />} />
-          <Route path="/dues" element={<Dues />} />
-          <Route path="/events/:id" element={<EventDetail />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
-  )
+  return <ErrorBoundary><AppStateProvider><BrowserRouter><RoutedApp /></BrowserRouter></AppStateProvider></ErrorBoundary>
 }

@@ -1,31 +1,19 @@
 ﻿# SPE UMaT Student Chapter website
 
-React + Vite website for the Society of Petroleum Engineers, University of Mines and Technology (Tarkwa) student chapter. The frontend lives in `frontend/`; the Supabase backend is in `backend/`.
+React + Vite JavaScript frontend and Supabase backend for the SPE UMaT Student Chapter. The implementation follows the guides in `frontend/` and `backend/` while keeping the frontend in JavaScript.
 
-## Frontend
+## Run locally
 
-Install dependencies from this directory with `npm install`.
+From this directory, install packages with `npm install`. Copy `.env.example` to `frontend/.env.local`, then run `npm run dev`.
 
-- `npm run dev` starts the frontend (usually `http://localhost:5173`).
-- `npm run build` builds the frontend.
-- `npm run lint` lints the frontend.
+Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SITE_URL`, and `VITE_CAPTCHA_SITE_KEY`. Only the public Supabase URL, anon key, site URL, and CAPTCHA site key belong in the frontend environment. Never place service-role or other backend secrets here.
 
-For backend setup, install the Supabase CLI and follow [backend/README.md](backend/README.md). The backend implementation follows `backend/SPE_UMaT_Website_Backend_Guide.pdf`.
+Use `npm run build` to build the site and `npm run lint` to lint it. Backend setup is documented in [backend/README.md](backend/README.md).
 
-## Paystack
+## Implemented routes
 
-Copy `.env.example` to `.env` and set `VITE_PAYSTACK_PUBLIC_KEY=pk_test_your_key`. Amounts are charged in GHS. A live secret-key verification step belongs on a server before production. Replace placeholder contact and social URLs in `.env` as well.
+Public pages: `/`, `/about`, `/events`, `/events/:slug`, `/news`, `/news/:slug`, `/media`, `/leaderboard`.
 
-## Pages
+Member flows without member accounts: `/register`, `/register/verify`, `/register/success`, `/merit`, `/checkin/:eventToken`, `/checkin`.
 
-- `/` Home
-- `/about` Chapter overview
-- `/membership` Membership information
-- `/join-committee` Committee interest form
-- `/newsfile` Chapter news
-- `/media` Calendar, photos and recordings
-- `/dues` Payments
-- `/dashboard` Member tools
-- `/admin` Office-specific tools
-
-Some frontend flows still use local demo data. Integrate them against the endpoint contracts in the backend guide and `backend/supabase/functions/`.
+Admin routes use Supabase Auth and RLS: `/admin/login`, `/admin`, `/admin/registrations`, `/admin/events`, `/admin/attendance`, `/admin/merit`, `/admin/news`, `/admin/media`, `/admin/messages`, `/admin/audit`, `/admin/admins`.

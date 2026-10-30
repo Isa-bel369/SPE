@@ -1,0 +1,98 @@
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import Markdown from '../../components/Markdown'
+import { adminCall } from '../../lib/api'
+import { resizeImage } from '../../lib/image'
+import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../state/contexts'
+import { formatDate } from '../../lib/format'
+
+function slugify(value) { return (value || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) }
+function accraTimestamp(value) { return new Date(`${value}:00Z`).toISOString() }
+
+export default function EventsAdmin() {
+  const { roles } = useAuth()
+  const advanced = roles.some((role) => ['organization_head', 'technical_head'].includes(role))
+  const [events, setEvents] = useState([]); const [tokens, setTokens] = useState({})
+  const [selected, setSelected] = useState(undefined); const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(''); const [busy, setBusy] = useState(false)
+  const [cover, setCover] = useState(null)
+  async function load() {
+    setLoading(true); setError('')
+    const [eventResult, tokenResult] = await Promise.all([
+      supabase.from('events').select('*').order('created_at', { ascending: false }),
+      supabase.from('event_checkin_tokens').select('event_id,is_active'),
+    ])
+    if (eventResult.error || tokenResult.error) setError('Could not load events. Check access and retry.')
+    else { setEvents(eventResult.data || []); setTokens(Object.fromEntries((tokenResult.data || []).map((row) => [row.event_id, row.is_active]))) }
+    setLoading(false)
+  }
+  useEffect(() => { load() }, [])
+  const form = selected || { title: '', slug: '', description: '', starts_at: '', ends_at: '', location: '', points: 3, radius_m: 100, is_published: false }
+  function update(key, value) { setSelected((old) => ({ ...(old || form), [key]: value })) }
+  async function submit(event) {
+    event.preventDefault(); setBusy(true); setError('')
+    const values = new FormData(event.currentTarget)
+    const title = String(values.get('title')).trim()
+    const startsAt = accraTimestamp(values.get('starts_at'))
+    const endsAt = accraTimestamp(values.get('ends_at'))
+    const payload = { title, slug: String(values.get('slug')).trim(), description: values.get('description'), starts_at: startsAt, ends_at: endsAt, location: values.get('location'), is_published: values.get('is_published') === 'on' }
+    if (advanced) Object.assign(payload, { points: Number(values.get('points')), radius_m: Number(values.get('radius_m')), checkin_opens_at: values.get('checkin_opens_at') ? accraTimestamp(values.get('checkin_opens_at')) : startsAt, checkin_closes_at: values.get('checkin_closes_at') ? accraTimestamp(values.get('checkin_closes_at')) : endsAt, venue_lat: values.get('venue_lat') ? Number(values.get('venue_lat')) : null, venue_lng: values.get('venue_lng') ? Number(values.get('venue_lng')) : null })
+    try {
+      if (cover) {
+        const image = await resizeImage(cover, 1200)
+        const path = `events/${crypto.randomUUID()}.jpg`
+        const { error: uploadError } = await supabase.storage.from('site-media').upload(path, image, { contentType: 'image/jpeg' })
+        if (uploadError) throw uploadError
+        payload.cover_image_url = supabase.storage.from('site-media').getPublicUrl(path).data.publicUrl
+      }
+      let result
+      if (form.id) result = await supabase.from('events').update(payload).eq('id', form.id).select('id,cover_image_url').single()
+      else result = await supabase.from('events').insert(payload).select('id,cover_image_url').single()
+      if (result.error) throw result.error
+      if (cover && form.cover_image_url) {
+        try { const old = new URL(form.cover_image_url).pathname.split('/site-media/')[1]; if (old) await supabase.storage.from('site-media').remove([decodeURIComponent(old)]) } catch {}
+      }
+      setSelected(undefined); setCover(null); await load()
+    } catch (err) { setError(err.message || 'Event could not be saved.') }
+    finally { setBusy(false) }
+  }
+  async function getVenue() {
+    if (!navigator.geolocation) { setError('Location is not available on this device.'); return }
+    navigator.geolocation.getCurrentPosition((position) => {
+      if (position.coords.accuracy > 30) { setError('Accuracy is worse than 30 m. Move outdoors or wait for a better signal, then try again.'); return }
+      update('venue_lat', position.coords.latitude.toFixed(6)); update('venue_lng', position.coords.longitude.toFixed(6))
+    }, () => setError('Could not get location. Allow location access and try again.'), { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 })
+  }
+  async function toggleCheckin(item, is_active) {
+    try { await adminCall('set_checkin_state', { event_id: item.id, is_active }); await load() } catch (err) { setError(err.message) }
+  }
+  async function resetSecret(item) {
+    if (!window.confirm(`Reset the QR secret for “${item.title}”? All displayed QR codes will stop working.`)) return
+    try { await adminCall('reset_event_secret', { event_id: item.id }); setError(''); } catch (err) { setError(err.message) }
+  }
+  async function deleteEvent(item) {
+    if (!window.confirm(`Delete “${item.title}”? This cannot be undone.`)) return
+    try { await adminCall('delete_event', { event_id: item.id }); await load() }
+    catch (err) {
+      if (err.code === 'EVENT_HAS_CHECKINS' && window.confirm(`${err.message}\n\nUnpublish this event instead?`)) {
+        const { error: updateError } = await supabase.from('events').update({ is_published: false }).eq('id', item.id)
+        if (updateError) setError(updateError.message); else load()
+      } else setError(err.message)
+    }
+  }
+  const filtered = events
+  return <section><div className="section-heading"><h1>Events</h1><button className="btn" onClick={() => { setSelected({}); setCover(null) }}>Create event</button></div>{error && <p className="alert" role="alert">{error}</p>}{loading ? <p role="status">Loading events…</p> : <div className="table-scroll"><table className="table"><thead><tr><th>Event</th><th>Starts</th><th>Status</th><th>Check-in</th><th>Actions</th></tr></thead><tbody>{filtered.map((event) => { const qrReady = Boolean(event.venue_lat && event.venue_lng && event.checkin_opens_at && event.checkin_closes_at && event.is_published); return <tr key={event.id}><td>{event.title}</td><td>{formatDate(event.starts_at)}</td><td>{event.is_published ? 'Published' : 'Draft'}</td><td>{tokens[event.id] ? 'Open' : 'Closed'}</td><td className="row-actions"><button className="btn secondary" onClick={() => { setSelected({ ...event, starts_at: event.starts_at.slice(0, 16), ends_at: event.ends_at.slice(0, 16), checkin_opens_at: event.checkin_opens_at?.slice(0, 16) || '', checkin_closes_at: event.checkin_closes_at?.slice(0, 16) || '' }); setCover(null) }}>Edit</button>{advanced && <><Link className={`btn secondary ${qrReady ? '' : 'disabled-link'}`} to={qrReady ? `/admin/events/${event.id}/qr` : '#'} onClick={(e) => !qrReady && e.preventDefault()} title={qrReady ? '' : 'Set venue and check-in window, then publish this event.'}>Open QR</Link><button className="btn secondary" onClick={() => toggleCheckin(event, !tokens[event.id])}>{tokens[event.id] ? 'Close check-in' : 'Open check-in'}</button><button className="btn secondary" onClick={() => resetSecret(event)}>Reset secret</button><button className="btn danger" onClick={() => deleteEvent(event)}>Delete</button></>}</td></tr>})}</tbody></table></div>}
+    {selected !== undefined && <div className="modal-backdrop"><section className="card admin-modal"><div className="section-heading"><h2>{selected.id ? 'Edit event' : 'Create event'}</h2><button className="linkish" onClick={() => setSelected(undefined)}>Close</button></div><form className="form" onSubmit={submit}>
+      <label>Title<input name="title" required maxLength="120" value={form.title} onChange={(e) => update('title', e.target.value)} onBlur={() => !form.slug && update('slug', slugify(form.title))} /></label>
+      <label>Slug<input name="slug" required minLength="3" maxLength="80" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" value={form.slug} onChange={(e) => update('slug', e.target.value)} /></label>
+      <label>Description (Markdown)<textarea name="description" rows="5" required value={form.description || ''} onChange={(e) => update('description', e.target.value)} /></label><details><summary>Preview</summary><Markdown>{form.description}</Markdown></details>
+      <label>Starts<input name="starts_at" type="datetime-local" required defaultValue={form.starts_at} /></label><label>Ends<input name="ends_at" type="datetime-local" required defaultValue={form.ends_at} /></label>
+      <label>Location<input name="location" required value={form.location} onChange={(e) => update('location', e.target.value)} /></label>
+      <label>Cover image<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setCover(e.target.files?.[0] || null)} /></label>
+      <label className="checkbox"><input type="checkbox" name="is_published" defaultChecked={form.is_published} />Published</label>
+      <fieldset disabled={!advanced}><legend>Organization and Technical controls</legend>{!advanced && <p title="Only the Organization Head or Technical Head can change this.">Only the Organization Head or Technical Head can change this.</p>}<label>Points<input name="points" type="number" min="1" max="20" defaultValue={form.points || 3} /></label><label>Check-in opens<input name="checkin_opens_at" type="datetime-local" defaultValue={form.checkin_opens_at || form.starts_at} /></label><label>Check-in closes<input name="checkin_closes_at" type="datetime-local" defaultValue={form.checkin_closes_at || form.ends_at} /></label><label>Radius (metres)<input name="radius_m" type="number" min="20" max="1000" defaultValue={form.radius_m || 100} /></label><label>Venue latitude<input name="venue_lat" value={form.venue_lat ?? ''} onChange={(e) => update('venue_lat', e.target.value)} /></label><label>Venue longitude<input name="venue_lng" value={form.venue_lng ?? ''} onChange={(e) => update('venue_lng', e.target.value)} /></label><button className="btn secondary" type="button" onClick={getVenue}>Use my current location</button>{form.venue_lat && <a target="_blank" rel="noopener noreferrer" href={`https://www.openstreetmap.org/?mlat=${form.venue_lat}&mlon=${form.venue_lng}`}>View saved venue point on OpenStreetMap</a>}</fieldset>
+      <button className="btn" disabled={busy}>{busy ? 'Saving…' : 'Save event'}</button>
+    </form></section></div>}
+  </section>
+}
