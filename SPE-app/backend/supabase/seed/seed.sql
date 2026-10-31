@@ -1,50 +1,51 @@
-insert into public.site_content (key, body) values
-  ('home_intro', 'The SPE UMaT Student Chapter brings together future energy professionals through technical learning, industry engagement and service.'),
-  ('about_mission', 'Connect students with the knowledge, people and opportunities that advance the energy profession.'),
-  ('about_vision', 'A community of responsible, skilled and connected energy professionals.'),
-  ('about_benefits', 'Members take part in technical talks, workshops, industry visits, outreach and professional networking.'),
-  ('contact_info', 'Society of Petroleum Engineers, University of Mines and Technology, Tarkwa, Ghana.')
-on conflict (key) do nothing;
+-- Local development data. Keep it out of production.
 
-insert into public.events (title, slug, description, starts_at, ends_at, location, points, is_published)
+insert into public.site_content (key, body) values
+  ('home_hero_title', 'Where energy minds come together.'),
+  ('home_hero_intro', 'We are the SPE UMaT Student Chapter: a community of future energy professionals learning, leading, and building connections that move the industry forward.'),
+  ('home_hero_image', 'gallery/campus-briefing.jpg'),
+  ('home_hero_alt', 'Students working together at a university chapter activity.'),
+  ('home_hero_caption', 'Curiosity today. Leadership tomorrow.'),
+  ('home_intro', 'SPE brings together people who shape the future of energy. At UMaT, that mission comes to life through technical workshops, industry engagement, peer learning, and service to our community.'),
+  ('about_heading', 'WE ARE SPE UMAT'),
+  ('about_hero_image', 'gallery/campus-briefing.jpg'),
+  ('about_hero_alt', 'SPE UMaT chapter members working together.'),
+  ('about_chapter', 'SPE UMaT is the student chapter of SPE at the University of Mines and Technology, Tarkwa. The chapter hosts technical talks, software workshops, field exposure, outreach, and a merit programme that recognises consistent contribution.'),
+  ('about_mission', 'To collect, disseminate, and exchange technical knowledge concerning the exploration, development, and production of oil and gas resources, and related technologies, for the public benefit; and to provide opportunities for professionals to enhance their technical and professional competence.'),
+  ('about_vision', 'To be a society of professional excellence, providing its members the highest quality lifelong learning, and continuous personal and professional growth.'),
+  ('about_benefits', 'SPE UMaT members can take part in technical talks, software workshops, field exposure, outreach, professional learning, and chapter service.'),
+  ('contact_info', 'Petroleum Engineering Department, University of Mines and Technology, Tarkwa, Ghana.')
+on conflict (key) do update set body = excluded.body;
+
+insert into public.events (title, slug, description, starts_at, ends_at, location, cover_image_url, points, is_published)
 values
-  ('SPE UMaT Technical Forum', 'spe-umat-technical-forum', 'A staging event for checking event publishing and details.', now() + interval '14 days', now() + interval '14 days 3 hours', 'UMaT campus', 3, true),
-  ('Energy Careers Workshop', 'energy-careers-workshop', 'A staging event for checking upcoming events.', now() + interval '30 days', now() + interval '30 days 4 hours', 'UMaT campus', 3, true),
-  ('Student Chapter Orientation', 'student-chapter-orientation', 'A staging event for checking past events.', now() - interval '30 days', now() - interval '30 days' + interval '3 hours', 'UMaT campus', 3, true),
-  ('Draft Field Visit', 'draft-field-visit', 'Unpublished staging event with venue metadata for admin testing.', now() + interval '45 days', now() + interval '45 days 5 hours', 'Tarkwa', 3, false);
+  ('Jubilee Field Technical Visit', 'jubilee-field-technical-visit', 'A guided technical visit focused on offshore operations, health, safety and environment, and production systems.', '2026-11-08 07:30:00+00', '2026-11-08 15:30:00+00', 'Tarkwa Campus / Field departure', 'gallery/field-conversations.jpg', 3, true),
+  ('Petrel Fundamentals Workshop', 'petrel-fundamentals-workshop', 'Hands-on introduction to subsurface modelling for members preparing for internships.', '2026-10-28 14:00:00+00', '2026-10-28 17:00:00+00', 'Petroleum Computer Lab', 'gallery/lab-session.jpg', 3, true),
+  ('New Member Induction Night', 'new-member-induction-night', 'Welcome session for new SPE UMaT members, executive briefing, and networking.', '2026-11-21 17:00:00+00', '2026-11-21 20:00:00+00', 'Auditorium Annex', null, 3, true)
+on conflict (slug) do update set
+  title = excluded.title,
+  description = excluded.description,
+  starts_at = excluded.starts_at,
+  ends_at = excluded.ends_at,
+  location = excluded.location,
+  cover_image_url = excluded.cover_image_url,
+  points = excluded.points,
+  is_published = excluded.is_published;
 
 insert into public.news_posts (title, slug, body, is_published, published_at)
 values
-  ('Welcome to SPE UMaT', 'welcome-to-spe-umat', 'Welcome to the SPE UMaT Student Chapter website.', true, now() - interval '3 days'),
-  ('Technical learning this semester', 'technical-learning-this-semester', 'Chapter members will take part in technical sessions and practical learning.', true, now() - interval '2 days'),
-  ('Industry engagement', 'industry-engagement', 'Updates from chapter industry engagement activities.', true, now() - interval '1 day'),
-  ('Draft chapter announcement', 'draft-chapter-announcement', 'Staging-only unpublished post.', false, null);
+  ('SPE UMaT opens 2026/27 membership window', 'spe-umat-opens-2026-27-membership-window', 'Membership registration is open for students interested in the SPE UMaT Student Chapter. New members can take part in chapter learning and activities.', true, '2026-10-10 12:00:00+00'),
+  ('Paper contest coaching starts this month', 'paper-contest-coaching-starts-this-month', 'The Technical Committee will host weekly coaching for students preparing SPE paper contest abstracts.', true, '2026-10-05 12:00:00+00')
+on conflict (slug) do update set
+  title = excluded.title,
+  body = excluded.body,
+  is_published = excluded.is_published,
+  published_at = excluded.published_at;
 
 insert into public.media_items (type, title, category, url, is_published)
-values
-  ('youtube', 'Chapter introduction', 'general', 'https://www.youtube-nocookie.com/embed/ysz5S6PUM-U', true),
-  ('recording', 'Technical session recording', 'activity', 'https://www.youtube-nocookie.com/embed/ysz5S6PUM-U', true),
-  ('youtube', 'Energy careers session', 'event', 'https://www.youtube-nocookie.com/embed/ysz5S6PUM-U', true),
-  ('recording', 'Workshop highlights', 'activity', 'https://www.youtube-nocookie.com/embed/ysz5S6PUM-U', true),
-  ('youtube', 'SPE learning resources', 'general', 'https://www.youtube-nocookie.com/embed/ysz5S6PUM-U', true),
-  ('recording', 'Student research showcase', 'member', 'https://www.youtube-nocookie.com/embed/ysz5S6PUM-U', true),
-  ('youtube', 'Field activity overview', 'event', 'https://www.youtube-nocookie.com/embed/ysz5S6PUM-U', true),
-  ('recording', 'Chapter orientation', 'activity', 'https://www.youtube-nocookie.com/embed/ysz5S6PUM-U', true),
-  ('youtube', 'Executive welcome', 'executive', 'https://www.youtube-nocookie.com/embed/ysz5S6PUM-U', true),
-  ('recording', 'Career pathways discussion', 'member', 'https://www.youtube-nocookie.com/embed/ysz5S6PUM-U', true),
-  ('youtube', 'Workshop recording', 'activity', 'https://www.youtube-nocookie.com/embed/ysz5S6PUM-U', true),
-  ('recording', 'Chapter event recap', 'event', 'https://www.youtube-nocookie.com/embed/ysz5S6PUM-U', true);
-
--- Synthetic staging members. Never load this seed into production.
-insert into public.members (first_name, last_name, email, phone, programme, year_of_study, member_code, show_on_leaderboard, email_verified_at)
-select 'Test' || n, 'Member' || n, 'test-member-' || n || '@example.com', '+23324' || lpad(n::text, 7, '0'),
-  'BSc Petroleum Engineering', case when n % 5 = 0 then 'Postgraduate' else 'Year ' || (((n - 1) % 4) + 1)::text end,
-  (100000 + n)::text, n <= 5, now()
-from generate_series(1, 10) as n
-on conflict (member_code) do nothing;
-
-insert into public.merit_records (member_id, event_id, points, source, reason)
-select m.id, e.id, 3, 'event_checkin', null
-from public.members m cross join public.events e
-where m.email like 'test-member-%@example.com' and e.slug = 'student-chapter-orientation'
-on conflict do nothing;
+select v.type, v.title, v.category, v.url, true
+from (values
+  ('youtube', 'SPE International: Who we are', 'general', 'https://www.youtube-nocookie.com/embed/oY59wE3N1nM'),
+  ('recording', 'HSE toolbox talk recording', 'activity', 'https://www.youtube-nocookie.com/embed/Scxs7L0vhZ4')
+) as v(type, title, category, url)
+where not exists (select 1 from public.media_items existing where existing.url = v.url);

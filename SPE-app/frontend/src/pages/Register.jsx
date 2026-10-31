@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import TurnstileWidget from '../components/TurnstileWidget'
 import { PROGRAMMES, YEARS } from '../config/programmes'
-import { callFn } from '../lib/api'
+import { callFn, friendlyError } from '../lib/api'
 import { normalizePhone, registrationSchema } from '../schemas/forms'
 import { useRegistration } from '../state/contexts'
 
@@ -43,7 +43,7 @@ export default function Register() {
       setRegistration({ email: result.email, resendAvailableAt: Date.now() + result.resend_available_in_seconds * 1000, expiresAt: Date.now() + result.expires_in_seconds * 1000 })
       navigate('/register/verify')
     } catch (err) {
-      setError(err.message); setDetails(Object.fromEntries((err.details || []).map((item) => [item.field, item.message])))
+      setError(friendlyError(err, 'Could not start your registration. Check your details and try again.')); setDetails(Object.fromEntries((err.details || []).map((item) => [item.field, item.message])))
       setCaptcha(''); setResetKey((value) => value + 1)
     } finally { setBusy(false) }
   }
@@ -58,7 +58,6 @@ export default function Register() {
     <label className="checkbox"><input name="show_on_leaderboard" type="checkbox" />Show my first name and last initial on the public leaderboard (optional)</label>
     <div className="honeypot" aria-hidden="true"><label>Website<input name="website" tabIndex="-1" autoComplete="off" /></label></div>
     <TurnstileWidget onToken={setCaptcha} resetKey={resetKey} />
-    <p className="privacy-notice">The SPE UMaT Chapter collects your name, email address, phone number, programme and year of study to register you as a member, verify your email, issue your membership ID and record your merit points. Only authorised chapter executives can see this information, and it is not sold or shared. Your first name and last initial appear on the public leaderboard only if you tick the box above. Under the Data Protection Act, 2012 (Act 843) you may ask the executives to correct or remove your information.</p>
     {error && <p className="alert" role="alert">{error} {error === 'This email or phone number is already registered. Please contact the chapter executives.' && <Link to="/about">Contact the chapter</Link>}</p>}
     <button className="btn" disabled={busy || !captcha}>{busy ? 'Sending code…' : 'Register'}</button>
   </form></section>

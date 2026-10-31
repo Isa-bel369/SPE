@@ -35,6 +35,22 @@ export class ApiError extends Error {
   }
 }
 
+export function friendlyError(error, fallback = 'Something went wrong. Please try again.') {
+  if (!error) return fallback
+  if (error instanceof ApiError) return error.message || fallback
+  const code = String(error.code || '')
+  const message = String(error.message || '')
+  if (code === '23514' && message.includes('events_time_check')) return 'The event end time must be later than its start time.'
+  if (code === '23514') return 'Some information is outside the allowed range. Review the fields and try again.'
+  if (code === '23505') return 'A record with these details already exists. Check the name or slug and try again.'
+  if (code === '23503') return 'This item is linked to other records and cannot be changed that way.'
+  if (code === '42501' || code === 'PGRST301') return 'You do not have permission to do that. Check your account access.'
+  if (code === 'PGRST116') return 'This item could not be found. Refresh the page and try again.'
+  if (message === 'Failed to fetch' || message.includes('NetworkError')) return 'Could not reach the server. Check your internet connection and try again.'
+  if (/\b(?:constraint|violates|PostgREST|JWT|SQLSTATE|relation ".+"|column ".+"|duplicate key)\b/i.test(message)) return fallback
+  return message || fallback
+}
+
 export async function callFn(name, body = {}, accessToken) {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new ApiError('SERVER_ERROR', 'Supabase frontend settings are missing. Copy the values from .env.example.')
   const headers = { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY }
@@ -50,7 +66,7 @@ export async function callFn(name, body = {}, accessToken) {
   }
   if (!result?.ok) {
     const error = result?.error || {}
-    throw new ApiError(error.code || 'SERVER_ERROR', MESSAGES[error.code] || error.message, error.details, error.retry_after_seconds)
+    throw new ApiError(error.code || 'SERVER_ERROR', MESSAGES[error.code] || friendlyError(error), error.details, error.retry_after_seconds)
   }
   return result.data
 }

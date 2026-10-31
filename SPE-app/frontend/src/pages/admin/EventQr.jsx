@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
-import { adminCall } from '../../lib/api'
+import { adminCall, friendlyError } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
 import { SITE_URL } from '../../lib/supabase'
 
@@ -17,7 +17,7 @@ export default function EventQr() {
     try {
       const result = await adminCall('qr_token', { event_id: id })
       setToken(result.token); setRefreshIn(result.refresh_in_seconds); setLastSuccess(Date.now()); setLost(false); setError(''); setRetryAttempt(0)
-    } catch (err) { setError(err.message); setRetryAttempt((value) => value + 1) }
+    } catch (err) { setError(friendlyError(err, 'Could not load the event QR code. Check your connection and retry.')); setRetryAttempt((value) => value + 1) }
   }, [id])
   useEffect(() => {
     supabase.from('events').select('id,title,location,venue_lat,venue_lng,checkin_opens_at,checkin_closes_at,is_published').eq('id', id).maybeSingle().then(({ data }) => setEvent(data))
@@ -53,9 +53,9 @@ export default function EventQr() {
     if (!window.confirm(message)) return
     setBusy(true)
     try { await adminCall(name, body); if (name === 'reset_event_secret') await refresh(); else setClosed(true) }
-    catch (err) { setError(err.message) } finally { setBusy(false) }
+    catch (err) { setError(friendlyError(err, 'Could not update the event QR settings. Try again.')) } finally { setBusy(false) }
   }
   const link = token ? `${SITE_URL.replace(/\/$/, '')}/checkin/${token}` : ''
   const progress = refreshIn ? `${Math.max(0, Math.min(100, (refreshIn / 30) * 100))}%` : '0%'
-  return <main className="qr-screen" onContextMenu={(event) => event.preventDefault()}><header><Link to="/admin/events">Back to event</Link><h1>{event?.title || 'Event QR code'}</h1><p>{event?.location}</p></header>{error && <p className="qr-badge" role="status">{lost ? 'Connection lost' : 'Reconnecting'}</p>}{closed ? <p>Check-in is closed.</p> : token && !lost ? <><div className="qr-panel"><QRCodeSVG value={link} level="M" size={Math.min(window.innerHeight * 0.68, 740)} includeMargin /></div><p className="qr-url">{link}</p><div className="qr-progress"><i style={{ width: progress }} /></div><p>Code refreshes in {refreshIn}s</p></> : <p>{lost ? 'Connection lost' : 'Waiting for a valid check-in code…'}</p>}<div className="qr-actions"><button className="btn secondary" disabled={busy || closed} onClick={() => command('set_checkin_state', { event_id: id, is_active: false }, 'Close check-in for this event?')}>Close check-in</button><button className="btn danger" disabled={busy} onClick={() => command('reset_event_secret', { event_id: id }, 'Reset the event secret? Current QR codes will stop working immediately.')}>Reset secret</button></div></main>
+  return <main className="qr-screen" onContextMenu={(event) => event.preventDefault()}><header><Link to="/admin/events">Back to event</Link><h1>{event?.title || 'Event QR code'}</h1><p>{event?.location}</p></header>{error && <p className="qr-badge" role="status">{lost ? 'Connection lost' : `Could not load the QR code: ${error}`}</p>}{closed ? <p>Check-in is closed.</p> : token && !lost ? <><div className="qr-panel"><QRCodeSVG value={link} level="M" size={Math.min(window.innerHeight * 0.68, 740)} includeMargin /></div><p className="qr-url">{link}</p><div className="qr-progress"><i style={{ width: progress }} /></div><p>Code refreshes in {refreshIn}s</p></> : <p>{lost ? 'Connection lost. Check your connection and retry.' : error ? 'The QR code is unavailable. Check the message above.' : 'Waiting for a valid check-in code…'}</p>}<div className="qr-actions"><button className="btn secondary" disabled={busy || closed} onClick={() => command('set_checkin_state', { event_id: id, is_active: false }, 'Close check-in for this event?')}>Close check-in</button><button className="btn danger" disabled={busy} onClick={() => command('reset_event_secret', { event_id: id }, 'Reset the event secret? Current QR codes will stop working immediately.')}>Reset secret</button></div></main>
 }

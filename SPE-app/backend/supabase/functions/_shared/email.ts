@@ -3,7 +3,7 @@ import { AppError } from './errors.ts'
 const escapeHtml = (text: string) => text.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!)
 
 export async function sendEmail(to: string, subject: string, text: string, html: string) {
-  const apiKey = Deno.env.get('RESEND_API_KEY')
+  const apiKey = Deno.env.get('RESEND_API_KEY') || Deno.env.get('Resend_API')
   const from = Deno.env.get('EMAIL_FROM')
   if (!apiKey || !from) throw new AppError('SERVER_ERROR')
   const result = await fetch('https://api.resend.com/emails', {

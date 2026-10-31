@@ -2,6 +2,7 @@
 import { adminCall } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
 import { formatDate } from '../../lib/format'
+import { friendlyError } from '../../lib/api'
 
 export default function MeritTracker() {
   const [members, setMembers] = useState([])
@@ -14,7 +15,7 @@ export default function MeritTracker() {
   async function loadMembers() {
     const { data, error: requestError } = await supabase.from('admin_registrations')
       .select('id,member_code,first_name,last_name,total_points').order('total_points', { ascending: false })
-    if (requestError) setError(requestError.message)
+    if (requestError) setError(friendlyError(requestError, 'Could not load members. Refresh the page and try again.'))
     else setMembers(data || [])
   }
   useEffect(() => { loadMembers() }, [])
@@ -23,7 +24,7 @@ export default function MeritTracker() {
     setMember(row)
     const { data, error: requestError } = await supabase.from('admin_merit').select('*')
       .eq('member_id', row.id).order('created_at', { ascending: false })
-    if (requestError) setError(requestError.message)
+    if (requestError) setError(friendlyError(requestError, 'Could not load this member’s merit history. Try again.'))
     else setHistory(data || [])
   }
 
@@ -42,7 +43,7 @@ export default function MeritTracker() {
       form.reset()
       await loadMembers()
       await select(member)
-    } catch (requestError) { setError(requestError.message) }
+    } catch (requestError) { setError(friendlyError(requestError, 'Could not update merit points. Check the details and try again.')) }
   }
 
   const filtered = members.filter((row) => `${row.first_name} ${row.last_name} ${row.member_code}`.toLowerCase().includes(search.toLowerCase()))

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { friendlyError } from '../lib/api'
 
 export function useQuery(load, dependencies = []) {
   const [state, setState] = useState({ data: null, loading: true, error: '' })
@@ -9,8 +10,8 @@ export function useQuery(load, dependencies = []) {
     setState((old) => ({ ...old, loading: true, error: '' }))
     Promise.resolve().then(load).then((data) => {
       if (current) setState({ data, loading: false, error: '' })
-    }).catch(() => {
-      if (current) setState({ data: null, loading: false, error: 'Could not load this information.' })
+    }).catch((error) => {
+      if (current) setState({ data: null, loading: false, error: friendlyError(error, 'Could not load this information. Check your connection and try again.') })
     })
     return () => { current = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps

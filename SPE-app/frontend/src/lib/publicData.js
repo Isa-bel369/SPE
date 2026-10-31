@@ -6,10 +6,16 @@ export async function getSiteContent(keys) {
   return Object.fromEntries((data || []).map((row) => [row.key, row.body]))
 }
 
+export function publicImageUrl(value) {
+  if (!value) return ''
+  if (/^https?:\/\//i.test(value)) return value
+  return supabase.storage.from('site-media').getPublicUrl(value).data.publicUrl
+}
+
 export async function getPublicEvents() {
   const { data, error } = await supabase.from('events_public').select('*').order('starts_at', { ascending: true })
   if (error) throw error
-  return data || []
+  return (data || []).map((event) => ({ ...event, cover_image_url: publicImageUrl(event.cover_image_url) }))
 }
 
 export async function getNews(limit = 9) {
@@ -40,7 +46,7 @@ export async function getLeaderboard() {
 export async function getEvent(slug) {
   const { data, error } = await supabase.from('events_public').select('*').eq('slug', slug).maybeSingle()
   if (error) throw error
-  return data
+  return data ? { ...data, cover_image_url: publicImageUrl(data.cover_image_url) } : null
 }
 
 export async function getPost(slug) {

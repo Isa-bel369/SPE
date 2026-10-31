@@ -13,7 +13,13 @@ export default function AdminLogin() {
     event.preventDefault(); setError(''); setBusy(true)
     const fields = new FormData(event.currentTarget)
     const { data, error: authError } = await supabase.auth.signInWithPassword({ email: fields.get('email'), password: fields.get('password') })
-    if (authError || !data.session) { setError('Email or password is incorrect.'); setBusy(false); return }
+    if (authError || !data.session) {
+      setError(authError?.code === 'email_provider_disabled'
+        ? 'Email sign-in is disabled in Supabase. Enable the Email provider in Authentication settings.'
+        : 'Email or password is incorrect.')
+      setBusy(false)
+      return
+    }
     let roles = []
     try { roles = JSON.parse(atob(data.session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).app_roles || [] } catch {}
     if (!roles.length) { await supabase.auth.signOut(); setError('This account has no access.'); setBusy(false); return }

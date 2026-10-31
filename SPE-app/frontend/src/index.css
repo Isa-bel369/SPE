@@ -845,7 +845,8 @@ img {
 .inline-form { display: flex; align-items: end; flex-wrap: wrap; margin: 14px 0; }
 .inline-form label { min-width: 240px; }
 .stat-row { display: flex; flex-wrap: wrap; gap: 14px; margin: 18px 0; }
-.stat { display: grid; gap: 8px; min-width: 160px; padding: 18px; background: white; border: 1px solid var(--line); border-radius: 8px; }
+.stat { display: grid; gap: 8px; min-width: 160px; padding: 18px; background: white; border: 1px solid var(--line); border-radius: 8px; color: var(--text); }
+.stat span { color: var(--muted); opacity: 1; }
 .stat strong { font-size: 28px; color: var(--navy); }
 .qr-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 12px; padding: 24px; text-align: center; color: white; background: #061426; }
 .qr-screen h1 { margin: 8px 0; }

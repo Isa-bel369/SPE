@@ -4,18 +4,18 @@ import TurnstileWidget from '../components/TurnstileWidget'
 import Markdown from '../components/Markdown'
 import DataState from '../components/DataState'
 import { useQuery } from '../hooks/useQuery'
-import { getMedia, getNews, getPublicEvents, getSiteContent } from '../lib/publicData'
-import { callFn } from '../lib/api'
+import { getMedia, getNews, getPublicEvents, getSiteContent, publicImageUrl } from '../lib/publicData'
+import { callFn, friendlyError } from '../lib/api'
 import { formatDate } from '../lib/format'
 import { contactSchema } from '../schemas/forms'
 
 async function loadHome() {
-  const [content, events, news, photos, executives] = await Promise.all([
-    getSiteContent(['home_intro', 'contact_info']), getPublicEvents(), getNews(3),
-    getMedia({ type: 'photo' }), getMedia({ type: 'photo', category: 'executive' }),
+  const [content, events, news, executives] = await Promise.all([
+    getSiteContent(['home_hero_title', 'home_hero_intro', 'home_hero_image', 'home_hero_alt', 'home_hero_caption', 'home_intro', 'contact_info']), getPublicEvents(), getNews(3),
+    getMedia({ type: 'photo', category: 'executive' }),
   ])
   const now = Date.now()
-  return { content, events: events.filter((event) => new Date(event.ends_at) >= now).slice(0, 3), news, photos: photos.slice(0, 8), executives }
+  return { content, events: events.filter((event) => new Date(event.ends_at) >= now).slice(0, 3), news, executives }
 }
 
 function ContactForm({ contactInfo = '' }) {
@@ -36,7 +36,7 @@ function ContactForm({ contactInfo = '' }) {
       setFieldErrors({})
       await callFn('submit_contact', { ...parsed.data, captcha_token: captcha, website: values.website || '' })
       setSent(true); form.reset()
-    } catch (error) { setMessage(error.message); setFieldErrors(Object.fromEntries((error.details || []).map((item) => [item.field, item.message]))); setCaptcha(''); setResetKey((value) => value + 1) }
+    } catch (error) { setMessage(friendlyError(error, 'Your message could not be sent. Check your connection and try again.')); setFieldErrors(Object.fromEntries((error.details || []).map((item) => [item.field, item.message]))); setCaptcha(''); setResetKey((value) => value + 1) }
     finally { setBusy(false) }
   }
   return (
@@ -81,15 +81,18 @@ export default function Home() {
         <div className="home-hero-copy">
           <div className="home-kicker">University of Mines and Technology · Tarkwa</div>
           <div className="home-brand-lockup"><img src="/spe-logo.svg" alt="Society of Petroleum Engineers" /><span aria-hidden="true" /><img src="/umat-crest.svg" alt="University of Mines and Technology" /></div>
-          <h1>SPE UMaT Student Chapter</h1>
-          <p>A community for future energy professionals to learn, connect and contribute.</p>
+          <h1>{content.home_hero_title}</h1>
+          <Markdown>{content.home_hero_intro}</Markdown>
           <div className="home-actions"><Link className="btn" to="/register">Become a member</Link><Link className="btn secondary" to="/merit">Check my merit</Link></div>
         </div>
+        {content.home_hero_image && <div className="home-hero-visual">
+          <img src={publicImageUrl(content.home_hero_image)} alt={content.home_hero_alt || ''} />
+          {content.home_hero_caption && <div className="hero-photo-caption"><span className="caption-mark" aria-hidden="true">SPE</span><span>{content.home_hero_caption}</span></div>}
+        </div>}
       </section>
       <section className="section"><h2>About SPE UMaT</h2><DataState {...query} empty={null}><Markdown>{content.home_intro || ''}</Markdown><Link to="/about">More about the chapter</Link></DataState></section>
       <section className="section"><div className="section-heading"><h2>Upcoming events</h2><Link to="/events">All events</Link></div><DataState loading={query.loading} error={query.error} onRetry={query.retry} empty={query.data && !query.data.events.length ? 'No upcoming events right now. Check back soon.' : null}><Cards items={query.data?.events} kind="events" /></DataState></section>
       <section className="section"><div className="section-heading"><h2>Latest news</h2><Link to="/news">All news</Link></div><DataState loading={query.loading} error={query.error} onRetry={query.retry} empty={query.data && !query.data.news.length ? 'No news has been published yet.' : null}><Cards items={query.data?.news} kind="news" /></DataState></section>
-      <section className="section"><div className="section-heading"><h2>Chapter photos</h2><Link to="/media">Explore media</Link></div><DataState loading={query.loading} error={query.error} onRetry={query.retry} empty={query.data && !query.data.photos.length ? 'Chapter photos will appear here.' : null}><div className="home-gallery">{query.data?.photos.map((photo) => <Link key={photo.id} to="/media"><img src={photo.imageUrl} alt={photo.title} loading="lazy" width="640" height="480" /></Link>)}</div></DataState></section>
       <section className="section"><h2>Our executives</h2><DataState loading={query.loading} error={query.error} onRetry={query.retry} empty={query.data && !query.data.executives.length ? 'Executive profiles will appear here.' : null}><div className="grid cards">{query.data?.executives.map((item) => <article className="card" key={item.id}><img src={item.imageUrl} alt={item.title} loading="lazy" width="400" height="400" /><h3>{item.title}</h3></article>)}</div></DataState></section>
       <ContactForm contactInfo={content.contact_info} />
     </>

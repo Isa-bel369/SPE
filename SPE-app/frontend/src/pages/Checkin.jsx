@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { callFn } from '../lib/api'
+import { callFn, friendlyError } from '../lib/api'
 import { getDeviceToken, getPosition } from '../lib/device'
 import { useCheckin } from '../state/contexts'
 
@@ -34,7 +34,7 @@ export default function Checkin() {
       setCheckin({ ...response, deviceToken, startedAt: Date.now() })
       navigate('/checkin', { replace: true })
     }).catch((err) => {
-      if (!cancelled) { setError(err.code === 'LOCATION_DENIED' ? `${err.message} Open your browser settings, allow location for this site, then scan the QR code again.` : err.message); setErrorCode(err.code || ''); setPhase('error') }
+      if (!cancelled) { const message = friendlyError(err, 'Could not confirm your location. Allow location access and try again.'); setError(err.code === 'LOCATION_DENIED' ? `${message} Open your browser settings, allow location for this site, then scan the QR code again.` : message); setErrorCode(err.code || ''); setPhase('error') }
     })
     return () => { cancelled = true }
   }, [eventToken, attempt, navigate, setCheckin])
@@ -53,7 +53,8 @@ export default function Checkin() {
       const response = await callFn('check_in', { session_id: checkin.session_id, member_code, device_token: checkin.deviceToken, location })
       setResult(response); setCheckin(null); setPhase('success')
     } catch (err) {
-      setError(err.code === 'LOCATION_DENIED' ? `${err.message} Open your browser settings, allow location for this site, then scan the QR code again.` : err.message)
+      const message = friendlyError(err, 'Could not complete check-in. Check your connection and try again.')
+      setError(err.code === 'LOCATION_DENIED' ? `${message} Open your browser settings, allow location for this site, then scan the QR code again.` : message)
       setErrorCode(err.code || '')
       if (['SESSION_INVALID', 'QR_EXPIRED'].includes(err.code)) { setCheckin(null); setPhase('expired') }
       else setPhase('ready')

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { callFn } from '../lib/api'
+import { callFn, friendlyError } from '../lib/api'
 import { useRegistration } from '../state/contexts'
 import { verificationCodeSchema } from '../schemas/forms'
 
@@ -29,7 +29,7 @@ export default function Verify() {
       const result = await callFn('verify_email', { email: registration.email, code })
       setRegistration((current) => ({ ...current, memberCode: result.member_code, firstName: result.first_name }))
       navigate('/register/success')
-    } catch (err) { setError(err.message) } finally { setBusy(false) }
+    } catch (err) { setError(friendlyError(err, 'Could not verify your email. Check the code and try again.')) } finally { setBusy(false) }
   }
   async function resend() {
     setBusy(true); setError('')
@@ -37,7 +37,7 @@ export default function Verify() {
       const result = await callFn('resend_code', { email: registration.email })
       setRegistration((current) => ({ ...current, resendAvailableAt: Date.now() + result.resend_available_in_seconds * 1000, expiresAt: Date.now() + result.expires_in_seconds * 1000 }))
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err, 'Could not send another verification code. Try again.'))
       if (err.code === 'RATE_LIMITED') {
         setResendBlocked(true)
         if (err.retryAfter) setRegistration((current) => ({ ...current, resendAvailableAt: Date.now() + Math.max(err.retryAfter, 60) * 1000 }))
