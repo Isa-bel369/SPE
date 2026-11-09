@@ -40,7 +40,7 @@ The Auth settings in `config.toml` enable `public.custom_access_token_hook`, whi
 
 ## Implementation map
 
-- `supabase/migrations/0001_schema.sql` through `0008_checkin_token_state.sql`: schema, security-definer transactions, RLS, views, storage, scheduled cleanup, contact notification trigger, and admin check-in state access.
+- `supabase/migrations/0001_schema.sql` through `0009_executive_profiles.sql`: schema, security-definer transactions, RLS, views, storage, scheduled cleanup, contact notification trigger, admin check-in state access, and executive profile fields.
 - `supabase/functions/`: public member, lookup, check-in and contact endpoints plus admin endpoints from the guide.
 - `supabase/functions/_shared/`: request validation, authentication, rate limits, email, CAPTCHA, QR signing and response envelopes.
 - `supabase/seed/seed.sql`: example public content for local development.
@@ -49,6 +49,6 @@ Public functions return `{ "ok": true, "data": ... }` on success and the documen
 
 ## Deploying
 
-This repo is linked to the SPE Supabase project (`jjscvssnmvqqdvyicare`). Migrations 0001–0008 and all Edge Functions are deployed. To deploy future changes, run `supabase db push` and `supabase functions deploy` from this folder.
+This repo is linked to the SPE Supabase project (`jjscvssnmvqqdvyicare`). Migrations through 0008 and all Edge Functions are deployed. To deploy future changes, run `supabase db push` and `supabase functions deploy` from this folder.
 
 The current Auth Site URL and redirect paths are set for local development at `http://localhost:5173`. Update them to the deployed frontend URL before using hosted invite or password-reset links. Configure custom SMTP and the production email, CAPTCHA, webhook, and allowed-origin values before enabling email-dependent flows. The Home and About hero images and event covers use files in the `site-media` bucket.

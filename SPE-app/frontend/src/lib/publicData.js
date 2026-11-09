@@ -25,7 +25,7 @@ export async function getNews(limit = 9) {
 }
 
 export async function getMedia(query = {}) {
-  let request = supabase.from('media_items').select('id,type,title,category,url,storage_path,event_id').eq('is_published', true)
+  let request = supabase.from('media_items').select('id,type,title,position,description,category,url,storage_path,event_id').eq('is_published', true)
   if (query.type) request = request.eq('type', query.type)
   if (query.category && query.category !== 'all') request = request.eq('category', query.category)
   if (query.eventId) request = request.eq('event_id', query.eventId)

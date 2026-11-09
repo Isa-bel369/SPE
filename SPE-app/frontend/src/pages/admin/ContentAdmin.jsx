@@ -46,6 +46,7 @@ function NewsManager() {
 function MediaManager() {
   const [items, setItems] = useState([]); const [events, setEvents] = useState([])
   const [error, setError] = useState(''); const [progress, setProgress] = useState('')
+  const [executive, setExecutive] = useState(null); const [executivePhoto, setExecutivePhoto] = useState(null); const [executiveBusy, setExecutiveBusy] = useState(false)
   async function load() {
     const [media, eventResult] = await Promise.all([supabase.from('media_items').select('*').order('created_at', { ascending: false }), supabase.from('events').select('id,title').order('starts_at')])
     if (media.error || eventResult.error) setError('Could not load media content.')
@@ -70,6 +71,34 @@ function MediaManager() {
     }
     setProgress(''); if (!failures) form.reset(); await load()
   }
+  async function saveExecutive(event) {
+    event.preventDefault(); setError(''); setProgress(''); setExecutiveBusy(true)
+    const form = event.currentTarget; const values = new FormData(form)
+    const name = String(values.get('name') || '').trim(); const position = String(values.get('position') || '').trim(); const description = String(values.get('description') || '').trim()
+    let path
+    try {
+      if (executivePhoto) {
+        const blob = await resizeImage(executivePhoto, 1000)
+        path = `gallery/${crypto.randomUUID()}.jpg`
+        const { error: uploadError } = await supabase.storage.from('site-media').upload(path, blob, { contentType: 'image/jpeg' })
+        if (uploadError) throw uploadError
+      }
+      const profile = { title: name, position, description, category: 'executive', is_published: true }
+      let result
+      if (executive?.id) {
+        result = await supabase.from('media_items').update({ ...profile, ...(path ? { storage_path: path } : {}) }).eq('id', executive.id)
+      } else {
+        if (!path) { setError('Choose a profile photo before saving.'); return }
+        result = await supabase.from('media_items').insert({ ...profile, type: 'photo', storage_path: path, url: null })
+      }
+      if (result.error) throw result.error
+      if (path && executive?.storage_path) await supabase.storage.from('site-media').remove([executive.storage_path])
+      setExecutive(null); setExecutivePhoto(null); form.reset(); await load()
+    } catch (err) {
+      if (path) await supabase.storage.from('site-media').remove([path])
+      setError(friendlyError(err, 'Could not save the executive profile. Check the details and try again.'))
+    } finally { setExecutiveBusy(false) }
+  }
   async function addLink(event) {
     event.preventDefault(); setError('')
     const form = event.currentTarget; const data = new FormData(form); const url = String(data.get('url')).trim()
@@ -82,7 +111,7 @@ function MediaManager() {
   }
   async function remove(item) { if (!window.confirm(`Delete “${item.title}”?`)) return; try { await adminCall('delete_media_item', { media_id: item.id }); await load() } catch (err) { setError(friendlyError(err, 'Could not delete this media item. Try again.')) } }
   async function toggle(item) { const { error: err } = await supabase.from('media_items').update({ is_published: !item.is_published }).eq('id', item.id); if (err) setError(friendlyError(err, 'Could not update this media item. Try again.')); else load() }
-  return <div><h2>Pictures</h2><form className="form card" onSubmit={upload}><label>Images<input name="files" type="file" multiple accept="image/jpeg,image/png,image/webp" required /></label><label>Default title<input name="title" placeholder="Defaults to each filename" /></label><label>Category<select name="category"><option value="general">General</option><option value="event">Event</option><option value="activity">Activity</option><option value="member">Member</option><option value="executive">Executive</option></select></label><label>Linked event<select name="event_id"><option value="">None</option>{events.map((event) => <option key={event.id} value={event.id}>{event.title}</option>)}</select></label><button className="btn">Upload selected</button>{progress && <p role="status">{progress}</p>}</form><h2>Videos and recordings</h2><form className="form card" onSubmit={addLink}><label>Title<input name="title" required /></label><label>Type<select name="type"><option value="youtube">YouTube</option><option value="recording">Recording</option></select></label><label>URL<input name="url" type="url" required /></label><button className="btn">Add link</button></form>{error && <p className="alert" role="alert">{error}</p>}<h2>Published content</h2><div className="table-scroll"><table className="table"><thead><tr><th>Title</th><th>Type</th><th>Storage path / URL</th><th>Status</th><th>Actions</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td>{item.title}</td><td>{item.type}</td><td>{item.storage_path || item.url || '—'}</td><td>{item.is_published ? 'Published' : 'Hidden'}</td><td><button className="btn secondary" onClick={() => toggle(item)}>{item.is_published ? 'Unpublish' : 'Publish'}</button><button className="btn danger" onClick={() => remove(item)}>Delete</button></td></tr>)}</tbody></table></div></div>
+  return <div><h2>Pictures</h2><form className="form card" onSubmit={upload}><label>Images<input name="files" type="file" multiple accept="image/jpeg,image/png,image/webp" required /></label><label>Default title<input name="title" placeholder="Defaults to each filename" /></label><label>Category<select name="category"><option value="general">General</option><option value="event">Event</option><option value="activity">Activity</option><option value="member">Member</option><option value="executive">Executive</option></select></label><label>Linked event<select name="event_id"><option value="">None</option>{events.map((event) => <option key={event.id} value={event.id}>{event.title}</option>)}</select></label><button className="btn">Upload selected</button>{progress && <p role="status">{progress}</p>}</form><h2>Executive profiles</h2><p>Add a photo, name, position and short biography. Published profiles appear in the “Our executives” section on the homepage.</p><form key={executive?.id || 'new'} className="form card" onSubmit={saveExecutive}><label>Name<input name="name" required maxLength="120" defaultValue={executive?.title || ''} /></label><label>Position<input name="position" required maxLength="120" placeholder="For example, Organization Head" defaultValue={executive?.position || ''} /></label><label>Short biography<textarea name="description" rows="3" maxLength="500" defaultValue={executive?.description || ''} /></label><label>Profile photo<input type="file" accept="image/jpeg,image/png,image/webp" required={!executive} onChange={(event) => setExecutivePhoto(event.target.files?.[0] || null)} /></label>{executive && <button type="button" className="btn secondary" onClick={() => { setExecutive(null); setExecutivePhoto(null) }}>Cancel edit</button>}<button className="btn" disabled={executiveBusy}>{executiveBusy ? 'Saving…' : executive ? 'Save profile' : 'Add executive'}</button></form><h2>Videos and recordings</h2><form className="form card" onSubmit={addLink}><label>Title<input name="title" required /></label><label>Type<select name="type"><option value="youtube">YouTube</option><option value="recording">Recording</option></select></label><label>URL<input name="url" type="url" required /></label><button className="btn">Add link</button></form>{error && <p className="alert" role="alert">{error}</p>}<h2>Published content</h2><div className="table-scroll"><table className="table"><thead><tr><th>Title</th><th>Type</th><th>Storage path / URL</th><th>Status</th><th>Actions</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td>{item.title}{item.position && <><br />{item.position}</>}</td><td>{item.type}</td><td>{item.storage_path || item.url || '—'}</td><td>{item.is_published ? 'Published' : 'Hidden'}</td><td>{item.category === 'executive' && <button className="btn secondary" onClick={() => { setExecutive(item); setExecutivePhoto(null); setError('') }}>Edit profile</button>}<button className="btn secondary" onClick={() => toggle(item)}>{item.is_published ? 'Unpublish' : 'Publish'}</button><button className="btn danger" onClick={() => remove(item)}>Delete</button></td></tr>)}</tbody></table></div></div>
 }
 
 function SiteTextManager() {
