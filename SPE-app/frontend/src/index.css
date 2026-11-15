@@ -816,11 +816,11 @@ img {
 .pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 18px; }
 .btn.danger { background: #a12d2d; color: white; }
 .admin-layout { min-height: 100vh; background: #f5f7fa; }
-.admin-top { min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 22px; color: white; background: var(--navy); }
+.admin-top { position: sticky; top: 0; z-index: 30; min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 22px; color: white; background: var(--navy); }
 .admin-top a { color: white; font-weight: 700; }
 .admin-top .linkish { color: white; }
-.admin-body { display: grid; grid-template-columns: 230px minmax(0, 1fr); min-height: calc(100vh - 64px); }
-.admin-side { display: flex; flex-direction: column; justify-content: space-between; padding: 16px 10px; background: #fff; border-right: 1px solid var(--line); }
+.admin-body { display: grid; grid-template-columns: 230px minmax(0, 1fr); min-height: calc(100vh - 64px); align-items: start; }
+.admin-side { position: sticky; top: 64px; align-self: start; display: flex; flex-direction: column; justify-content: space-between; height: calc(100vh - 64px); overflow-y: auto; padding: 16px 10px; background: #fff; border-right: 1px solid var(--line); }
 .admin-side nav { display: grid; gap: 4px; }
 .admin-side nav a { padding: 10px 12px; border-radius: 6px; color: var(--text); }
 .admin-side nav a.active { color: var(--navy); background: var(--blue-soft); font-weight: 700; }
@@ -866,7 +866,7 @@ img {
 
   .nav { justify-content: flex-start; width: 100%; }
   .admin-body { grid-template-columns: 1fr; }
-  .admin-side { border-right: 0; border-bottom: 1px solid var(--line); }
+  .admin-side { position: static; height: auto; overflow-y: visible; border-right: 0; border-bottom: 1px solid var(--line); }
   .admin-side nav { display: flex; overflow-x: auto; }
   .admin-side nav a { white-space: nowrap; }
   .admin-main { padding: 18px; }
