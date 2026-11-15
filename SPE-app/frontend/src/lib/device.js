@@ -1,9 +1,9 @@
 const DEVICE_KEY = 'spe-umat-device-v1'
 let memoryToken
 
-function locationError() {
-  const error = new Error('Location is required. Allow location for this site, then scan the QR code again.')
-  error.code = 'LOCATION_DENIED'
+function locationError(message = 'Location is required. Allow location for this site, then try again.', code = 'LOCATION_DENIED') {
+  const error = new Error(message)
+  error.code = code
   return error
 }
 
@@ -21,7 +21,7 @@ export function getDeviceToken() {
   }
 }
 
-export function getPosition() {
+export function getPosition({ timeout = 30000, targetAccuracy = 100 } = {}) {
   if (!navigator.geolocation) return Promise.reject(locationError())
   return new Promise((resolve, reject) => {
     let best = null
@@ -36,22 +36,30 @@ export function getPosition() {
       if (!position) return reject(locationError())
       resolve({ lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy })
     }
+    const finishWithError = (error) => {
+      if (finished) return
+      finished = true
+      if (timer) clearTimeout(timer)
+      if (watchId != null) navigator.geolocation.clearWatch(watchId)
+      reject(error)
+    }
     const onFix = (position) => {
       if (!best || position.coords.accuracy < best.coords.accuracy) best = position
-      if (position.coords.accuracy <= 100) finish(position)
-      else waitForBetterFix()
+      if (position.coords.accuracy <= targetAccuracy) finish(position)
     }
-    const waitForBetterFix = () => {
-      if (timer) clearTimeout(timer)
-      if (best?.coords.accuracy <= 100) return finish(best)
-      try { watchId = navigator.geolocation.watchPosition(onFix, () => {}, { enableHighAccuracy: true, maximumAge: 0 }) }
-      catch { finish(best) }
-      timer = setTimeout(() => finish(best), 10000)
+    const onError = (error) => {
+      if (error.code === 1) finishWithError(locationError())
     }
-    navigator.geolocation.getCurrentPosition(onFix, (error) => {
-      if (error.code === error.PERMISSION_DENIED) finish(null)
-      else waitForBetterFix()
-    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 })
-    timer = setTimeout(waitForBetterFix, 15000)
+    const options = { enableHighAccuracy: true, maximumAge: 0 }
+    try {
+      watchId = navigator.geolocation.watchPosition(onFix, onError, options)
+      navigator.geolocation.getCurrentPosition(onFix, onError, { ...options, timeout: Math.min(timeout, 15000) })
+      timer = setTimeout(() => {
+        if (best && best.coords.accuracy <= targetAccuracy) finish(best)
+        else finishWithError(locationError(`Could not get a location accurate to ${targetAccuracy} metres. Move outdoors or enter the coordinates manually.`, 'LOCATION_INACCURATE'))
+      }, timeout)
+    } catch {
+      finishWithError(locationError())
+    }
   })
 }

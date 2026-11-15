@@ -6,6 +6,7 @@ import { resizeImage } from '../../lib/image'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../state/contexts'
 import { formatDate } from '../../lib/format'
+import { getPosition } from '../../lib/device'
 
 function slugify(value) { return (value || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) }
 function accraTimestamp(value) { return new Date(`${value}:00Z`).toISOString() }
@@ -71,20 +72,17 @@ export default function EventsAdmin() {
     if (!window.isSecureContext) { setLocationMessage('Location access requires a secure connection (HTTPS) or localhost. Open the admin page using its HTTPS address.'); return }
     if (!navigator.geolocation) { setLocationMessage('This browser does not support location access. Enter the venue latitude and longitude manually.'); return }
     setLocating(true); setLocationMessage('Getting your location. Allow location access if your browser asks.')
-    navigator.geolocation.getCurrentPosition((position) => {
+    try {
+      const position = await getPosition({ timeout: 30000, targetAccuracy: 100 })
+      update('venue_lat', position.lat.toFixed(6)); update('venue_lng', position.lng.toFixed(6))
+      setLocationMessage(`Venue coordinates set (accuracy ±${Math.round(position.accuracy)} m).`)
+    } catch (err) {
+      setLocationMessage(err.code === 'LOCATION_DENIED'
+        ? 'Location permission was blocked. Allow precise location for this site, then try again.'
+        : 'Could not get a sufficiently accurate location. Move outdoors or enter the venue coordinates manually.')
+    } finally {
       setLocating(false)
-      if (position.coords.accuracy > 30) { setLocationMessage(`Location accuracy is about ${Math.round(position.coords.accuracy)} m; it must be 30 m or better. Move outdoors, wait for a stronger GPS signal, and try again.`); return }
-      update('venue_lat', position.coords.latitude.toFixed(6)); update('venue_lng', position.coords.longitude.toFixed(6))
-      setLocationMessage(`Venue coordinates set (accuracy ±${Math.round(position.coords.accuracy)} m).`)
-    }, (err) => {
-      setLocating(false)
-      const message = err.code === err.PERMISSION_DENIED
-        ? 'Location permission was blocked. Allow location for this site in your browser settings, then try again.'
-        : err.code === err.TIMEOUT
-          ? 'The browser could not get a location in time. Move outdoors or enter the venue coordinates manually.'
-          : 'Could not get your location. Check browser permissions or enter the coordinates manually.'
-      setLocationMessage(message)
-    }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 })
+    }
   }
   async function toggleCheckin(item, is_active) {
     try { await adminCall('set_checkin_state', { event_id: item.id, is_active }); await load() } catch (err) { setError(friendlyError(err, 'Could not update event check-in. Try again.')) }
