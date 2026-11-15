@@ -4,6 +4,8 @@ import { useAuth } from '../../state/contexts'
 const ITEMS = [
   ['/', 'Overview', []], ['/registrations', 'Registrations', ['organization_head', 'technical_head']],
   ['/events', 'Events', ['communications_head', 'organization_head', 'technical_head']],
+  ['/registration-settings', 'Registration payments', ['technical_head']],
+  ['/executives', 'Executive profiles', ['communications_head', 'technical_head']],
   ['/attendance', 'Attendance', ['organization_head', 'technical_head']], ['/merit', 'Merit tracker', ['organization_head', 'technical_head']],
   ['/news', 'News', ['communications_head', 'technical_head']], ['/media', 'Media and content', ['communications_head', 'technical_head']],
   ['/messages', 'Messages', ['communications_head', 'technical_head']], ['/audit', 'Audit log', ['technical_head']], ['/admins', 'Admins', ['technical_head']],
