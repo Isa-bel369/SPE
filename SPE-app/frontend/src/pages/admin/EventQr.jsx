@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { adminCall, friendlyError } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
 import { SITE_URL } from '../../lib/supabase'
+import { useConfirmDialog } from '../../components/useConfirmDialog'
 
 export default function EventQr() {
   const { id } = useParams()
@@ -13,6 +14,7 @@ export default function EventQr() {
   const [retryAttempt, setRetryAttempt] = useState(0)
   const [busy, setBusy] = useState(false); const wakeLock = useRef(null)
   const [closed, setClosed] = useState(false)
+  const { confirm, dialog } = useConfirmDialog()
   const refresh = useCallback(async () => {
     try {
       const result = await adminCall('qr_token', { event_id: id })
@@ -50,12 +52,12 @@ export default function EventQr() {
     return () => { active = false; document.removeEventListener('visibilitychange', visibility); wakeLock.current?.release() }
   }, [])
   async function command(name, body, message) {
-    if (!window.confirm(message)) return
+    if (!await confirm({ title: name === 'reset_event_secret' ? 'Reset event secret?' : 'Close event check-in?', message, confirmLabel: name === 'reset_event_secret' ? 'Reset secret' : 'Close check-in', danger: true })) return
     setBusy(true)
     try { await adminCall(name, body); if (name === 'reset_event_secret') await refresh(); else setClosed(true) }
     catch (err) { setError(friendlyError(err, 'Could not update the event QR settings. Try again.')) } finally { setBusy(false) }
   }
   const link = token ? `${SITE_URL.replace(/\/$/, '')}/checkin/${token}` : ''
   const progress = refreshIn ? `${Math.max(0, Math.min(100, (refreshIn / 30) * 100))}%` : '0%'
-  return <main className="qr-screen" onContextMenu={(event) => event.preventDefault()}><header><Link to="/admin/events">Back to event</Link><h1>{event?.title || 'Event QR code'}</h1><p>{event?.location}</p></header>{error && <p className="qr-badge" role="status">{lost ? 'Connection lost' : `Could not load the QR code: ${error}`}</p>}{closed ? <p>Check-in is closed.</p> : token && !lost ? <><div className="qr-panel"><QRCodeSVG value={link} level="M" size={Math.min(window.innerHeight * 0.68, 740)} includeMargin /></div><p className="qr-url">{link}</p><div className="qr-progress"><i style={{ width: progress }} /></div><p>Code refreshes in {refreshIn}s</p></> : <p>{lost ? 'Connection lost. Check your connection and retry.' : error ? 'The QR code is unavailable. Check the message above.' : 'Waiting for a valid check-in code…'}</p>}<div className="qr-actions"><button className="btn secondary" disabled={busy || closed} onClick={() => command('set_checkin_state', { event_id: id, is_active: false }, 'Close check-in for this event?')}>Close check-in</button><button className="btn danger" disabled={busy} onClick={() => command('reset_event_secret', { event_id: id }, 'Reset the event secret? Current QR codes will stop working immediately.')}>Reset secret</button></div></main>
+  return <main className="qr-screen" onContextMenu={(event) => event.preventDefault()}>{dialog}<header><Link to="/admin/events">Back to event</Link><h1>{event?.title || 'Event QR code'}</h1><p>{event?.location}</p></header>{error && <p className="qr-badge" role="status">{lost ? 'Connection lost' : `Could not load the QR code: ${error}`}</p>}{closed ? <p>Check-in is closed.</p> : token && !lost ? <><div className="qr-panel"><QRCodeSVG value={link} level="M" size={Math.min(window.innerHeight * 0.68, 740)} includeMargin /></div><p className="qr-url">{link}</p><div className="qr-progress"><i style={{ width: progress }} /></div><p>Code refreshes in {refreshIn}s</p></> : <p>{lost ? 'Connection lost. Check your connection and retry.' : error ? 'The QR code is unavailable. Check the message above.' : 'Waiting for a valid check-in code…'}</p>}<div className="qr-actions"><button className="btn secondary" disabled={busy || closed} onClick={() => command('set_checkin_state', { event_id: id, is_active: false }, 'Close check-in for this event?')}>Close check-in</button><button className="btn danger" disabled={busy} onClick={() => command('reset_event_secret', { event_id: id }, 'Reset the event secret? Current QR codes will stop working immediately.')}>Reset secret</button></div></main>
 }
