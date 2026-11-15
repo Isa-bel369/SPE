@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
 export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-export const SITE_URL = import.meta.env.VITE_SITE_URL || window.location.origin
+export const SITE_URL = typeof window !== 'undefined' ? window.location.origin : import.meta.env.VITE_SITE_URL || ''
 export const CAPTCHA_SITE_KEY = import.meta.env.VITE_CAPTCHA_SITE_KEY || ''
 export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY)
 
