@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { SITE_URL, supabase } from '../../lib/supabase'
 import { useAuth } from '../../state/contexts'
 
@@ -7,11 +7,17 @@ const RESET_EMAIL = 'officialdynasty672@gmail.com'
 
 export default function AdminPassword({ invite = false }) {
   const { session } = useAuth()
+  const location = useLocation()
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const recovery = Boolean(session)
   const authorizedRecovery = session?.user?.email?.trim().toLowerCase() === RESET_EMAIL
+  const authErrorCode = location.state?.authError || new URLSearchParams(location.hash.slice(1)).get('error_code')
+  useEffect(() => {
+    if (authErrorCode === 'otp_expired') setError('This reset link is expired or was already used. Request a new link below and open the newest email link only once.')
+    else if (authErrorCode) setError('This reset link could not be verified. Request a new link and try again.')
+  }, [authErrorCode])
   async function submit(event) {
     event.preventDefault(); setBusy(true); setError(''); setMessage('')
     const fields = new FormData(event.currentTarget)
