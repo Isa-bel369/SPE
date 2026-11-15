@@ -32,3 +32,12 @@ export function memberIdEmail(firstName: string, memberCode: string) {
     html: `<p>Welcome to the SPE UMaT Chapter, ${name}.</p><p>Your membership ID is <strong>${memberCode}</strong>.</p><p>Use it to check in to events and to see your merit points at <a href="${escapeHtml(site)}/merit">${escapeHtml(site)}/merit</a>. Keep it safe and do not share it.</p>`,
   }
 }
+
+export function pendingRegistrationEmail(firstName: string) {
+  const name = escapeHtml(firstName)
+  return {
+    subject: 'SPE UMaT Chapter registration pending review',
+    text: `Hello ${firstName}, we received your registration and payment proof. Your application is pending review. We will email your membership ID after approval.`,
+    html: `<p>Hello ${name},</p><p>We received your registration and payment proof. Your application is pending review.</p><p>We will email your membership ID after approval.</p>`,
+  }
+}

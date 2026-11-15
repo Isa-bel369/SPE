@@ -27,8 +27,8 @@ export default function Verify() {
     if (!parsed.success) { setError(parsed.error.issues[0].message); setBusy(false); return }
     try {
       const result = await callFn('verify_email', { email: registration.email, code })
-      setRegistration((current) => ({ ...current, memberCode: result.member_code, firstName: result.first_name }))
-      navigate('/register/success')
+      setRegistration((current) => ({ ...current, verified: true }))
+      navigate('/register/pending')
     } catch (err) { setError(friendlyError(err, 'Could not verify your email. Check the code and try again.')) } finally { setBusy(false) }
   }
   async function resend() {
