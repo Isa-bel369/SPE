@@ -80,7 +80,7 @@ export default function Home() {
       <section className="home-hero">
         <div className="home-hero-copy">
           <div className="home-kicker">University of Mines and Technology · Tarkwa</div>
-          <div className="home-brand-lockup"><img src="/spe-logo.svg" alt="Society of Petroleum Engineers" /><span aria-hidden="true" /><img src="/umat-crest.svg" alt="University of Mines and Technology" /></div>
+          <div className="home-brand-lockup"><img src="/spe-logo.jpg" alt="Society of Petroleum Engineers" /><span aria-hidden="true" /><img src="/umat-crest.png" alt="University of Mines and Technology" /></div>
           <h1>{content.home_hero_title}</h1>
           <Markdown>{content.home_hero_intro}</Markdown>
           <div className="home-actions"><Link className="btn" to="/register">Become a member</Link><Link className="btn secondary" to="/merit">Check my merit</Link></div>

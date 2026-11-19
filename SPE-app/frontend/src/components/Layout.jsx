@@ -27,7 +27,7 @@ export default function Layout() {
     <>
       <header className="site-header">
         <div className="header-inner">
-          <Link to="/" className="brand"><img src="/spe-logo.svg" alt="SPE UMaT Chapter" width="180" height="60" /></Link>
+          <Link to="/" className="brand"><img src="/spe-logo.jpg" alt="SPE UMaT Chapter" width="180" height="60" /></Link>
           <nav className="nav" aria-label="Main navigation">
             {links.map(([to, label]) => <NavLink key={to} to={to} end={to === '/'}>{label}</NavLink>)}
             {session ? <NavLink to="/admin">Admin portal</NavLink> : <NavLink to="/admin/login">Admin sign in</NavLink>}
