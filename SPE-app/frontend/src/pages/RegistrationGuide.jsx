@@ -1,0 +1,5 @@
+import { Link } from 'react-router-dom'
+
+export default function RegistrationGuide() {
+  return <section className="section"><h1>Before you register</h1><p>Read these steps before starting your SPE UMaT Chapter membership application.</p><ol><li>Review the current registration fee and Mobile Money recipient details.</li><li>Send the fee to the listed number and save a clear screenshot of the successful payment.</li><li>Complete the application and verify your email with the code we send.</li><li>Your application will remain pending while an administrator checks the payment proof.</li><li>After approval, we will email your membership ID. You can use it for event check-in and merit lookup.</li></ol><label className="checkbox"><input id="registration-understood" type="checkbox" />I have read and understood these steps.</label><p><Link className="btn" to="/register/payment" onClick={(event) => { if (!document.getElementById('registration-understood').checked) event.preventDefault() }}>Continue to payment details</Link></p></section>
+}

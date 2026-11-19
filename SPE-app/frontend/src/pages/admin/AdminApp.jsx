@@ -43,6 +43,8 @@ export default function AdminApp() {
       <Route path="merit" element={<Screen roles={['organization_head', 'technical_head']}><MeritTracker /></Screen>} />
       <Route path="news" element={<Screen roles={['communications_head', 'technical_head']}><ContentAdmin initialTab="news" /></Screen>} />
       <Route path="media" element={<Screen roles={['communications_head', 'technical_head']}><ContentAdmin initialTab="media" /></Screen>} />
+      <Route path="registration-settings" element={<Screen roles={['technical_head']}><ContentAdmin initialTab="payments" /></Screen>} />
+      <Route path="executives" element={<Screen roles={['communications_head', 'technical_head']}><ContentAdmin initialTab="executives" /></Screen>} />
       <Route path="messages" element={<Screen roles={['communications_head', 'technical_head']}><Messages /></Screen>} />
       <Route path="audit" element={<Screen roles={['technical_head']}><AuditLog /></Screen>} />
       <Route path="admins" element={<Screen roles={['technical_head']}><Admins /></Screen>} />

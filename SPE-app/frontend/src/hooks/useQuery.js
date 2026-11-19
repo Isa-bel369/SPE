@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { friendlyError } from '../lib/api'
+import { getSupabaseConfigError } from '../lib/supabase'
 
 export function useQuery(load, dependencies = []) {
   const [state, setState] = useState({ data: null, loading: true, error: '' })
@@ -8,6 +9,11 @@ export function useQuery(load, dependencies = []) {
   useEffect(() => {
     let current = true
     setState((old) => ({ ...old, loading: true, error: '' }))
+    const configError = getSupabaseConfigError()
+    if (configError) {
+      setState({ data: null, loading: false, error: configError })
+      return () => { current = false }
+    }
     Promise.resolve().then(load).then((data) => {
       if (current) setState({ data, loading: false, error: '' })
     }).catch((error) => {

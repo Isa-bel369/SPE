@@ -80,7 +80,7 @@ export default function Home() {
       <section className="home-hero">
         <div className="home-hero-copy">
           <div className="home-kicker">University of Mines and Technology · Tarkwa</div>
-          <div className="home-brand-lockup"><img src="/SPE.jpg" alt="Society of Petroleum Engineers" /><span aria-hidden="true" /><img src="/cropped-UMAT.png" alt="University of Mines and Technology" /></div>
+          <div className="home-brand-lockup"><img src="/spe-logo.svg" alt="Society of Petroleum Engineers" /><span aria-hidden="true" /><img src="/umat-crest.svg" alt="University of Mines and Technology" /></div>
           <h1>{content.home_hero_title}</h1>
           <Markdown>{content.home_hero_intro}</Markdown>
           <div className="home-actions"><Link className="btn" to="/register">Become a member</Link><Link className="btn secondary" to="/merit">Check my merit</Link></div>
@@ -93,7 +93,7 @@ export default function Home() {
       <section className="section"><h2>About SPE UMaT</h2><DataState {...query} empty={null}><Markdown>{content.home_intro || ''}</Markdown><Link to="/about">More about the chapter</Link></DataState></section>
       <section className="section"><div className="section-heading"><h2>Upcoming events</h2><Link to="/events">All events</Link></div><DataState loading={query.loading} error={query.error} onRetry={query.retry} empty={query.data && !query.data.events.length ? 'No upcoming events right now. Check back soon.' : null}><Cards items={query.data?.events} kind="events" /></DataState></section>
       <section className="section"><div className="section-heading"><h2>Latest news</h2><Link to="/news">All news</Link></div><DataState loading={query.loading} error={query.error} onRetry={query.retry} empty={query.data && !query.data.news.length ? 'No news has been published yet.' : null}><Cards items={query.data?.news} kind="news" /></DataState></section>
-      <section className="section"><h2>Meet our executives</h2><DataState loading={query.loading} error={query.error} onRetry={query.retry} empty={query.data && !query.data.executives.length ? 'Executive profiles will appear here.' : null}><div className="grid cards executive-cards">{query.data?.executives.map((item) => <article className="card" key={item.id}><img src={item.imageUrl} alt={item.title} loading="lazy" width="400" height="400" /><h3>{item.title}</h3>{item.position && <p className="muted">{item.position}</p>}{item.description && <p>{item.description}</p>}</article>)}</div></DataState></section>
+      <section className="section"><h2>Meet our executives</h2><DataState loading={query.loading} error={query.error} onRetry={query.retry} empty={query.data && !query.data.executives.length ? 'Executive profiles will appear here.' : null}><div className="executive-grid">{query.data?.executives.map((item) => <article className="executive-profile" key={item.id}><img src={item.imageUrl} alt={item.title} loading="lazy" width="320" height="320" />{item.position && <p className="executive-position">{item.position}</p>}<h3>{item.title}</h3></article>)}</div></DataState></section>
       <ContactForm contactInfo={content.contact_info} />
     </>
   )

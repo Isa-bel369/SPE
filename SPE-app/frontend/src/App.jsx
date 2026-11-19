@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef } from 'react'
-import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import ErrorBoundary from './components/ErrorBoundary'
 import { AppStateProvider } from './state/AppState'
@@ -17,6 +17,9 @@ import Verify from './pages/Verify'
 import RegisterSuccess from './pages/RegisterSuccess'
 import Merit from './pages/Merit'
 import Checkin from './pages/Checkin'
+import RegistrationGuide from './pages/RegistrationGuide'
+import RegistrationPayment from './pages/RegistrationPayment'
+import RegistrationPending from './pages/RegistrationPending'
 import NotFound from './pages/NotFound'
 
 const AdminApp = lazy(() => import('./pages/admin/AdminApp'))
@@ -24,15 +27,25 @@ const AdminApp = lazy(() => import('./pages/admin/AdminApp'))
 function Loading() { return <main className="section" aria-live="polite">Loading…</main> }
 
 function FlowCleanup() {
-  const { pathname } = useLocation()
+  const { pathname, hash, search } = useLocation()
+  const navigate = useNavigate()
   const previous = useRef(pathname)
   const { setRegistration } = useRegistration()
   const { setCheckin } = useCheckin()
   useEffect(() => {
+    if (pathname === '/' && hash) {
+      const authParams = new URLSearchParams(hash.slice(1))
+      const authError = authParams.get('error_code')
+      const authType = authParams.get('type')
+      if (authError || authParams.has('access_token') || authType === 'recovery' || authType === 'invite') {
+        const target = authType === 'invite' ? '/admin/accept-invite' : '/admin/reset-password'
+        navigate(`${target}${search}${hash}`, { replace: true, state: { authError } })
+      }
+    }
     if (previous.current.startsWith('/register') && (!pathname.startsWith('/register') || previous.current === '/register/success' && pathname !== previous.current)) setRegistration({})
     if (previous.current.startsWith('/checkin') && !pathname.startsWith('/checkin')) setCheckin(null)
     previous.current = pathname
-  }, [pathname, setCheckin, setRegistration])
+  }, [hash, navigate, pathname, search, setCheckin, setRegistration])
   return null
 }
 
@@ -47,9 +60,12 @@ function RoutedApp() {
       <Route path="/news/:slug" element={<NewsDetail />} />
       <Route path="/media" element={<Media />} />
       <Route path="/leaderboard" element={<Leaderboard />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/register" element={<RegistrationGuide />} />
+      <Route path="/register/payment" element={<RegistrationPayment />} />
+      <Route path="/register/form" element={<Register />} />
       <Route path="/register/verify" element={<Verify />} />
       <Route path="/register/success" element={<RegisterSuccess />} />
+      <Route path="/register/pending" element={<RegistrationPending />} />
       <Route path="/merit" element={<Merit />} />
       <Route path="/checkin/:eventToken" element={<Checkin />} />
       <Route path="/checkin" element={<Checkin />} />

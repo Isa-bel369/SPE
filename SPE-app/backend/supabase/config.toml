@@ -7,10 +7,12 @@ extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 [auth]
-site_url = "http://localhost:5173"
+site_url = "https://speumat.vercel.app"
 additional_redirect_urls = [
   "http://localhost:5173/admin/accept-invite",
   "http://localhost:5173/admin/reset-password",
+  "https://speumat.vercel.app/admin/accept-invite",
+  "https://speumat.vercel.app/admin/reset-password",
 ]
 jwt_expiry = 3600
 enable_signup = false
@@ -23,13 +25,31 @@ uri = "pg-functions://postgres/public/custom_access_token_hook"
 
 [auth.email]
 enable_signup = true
+enable_confirmations = true
+max_frequency = "1m"
+otp_length = 8
+
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[auth.sms]
+enable_confirmations = true
 
 [db]
 major_version = 17
 
+[db.pooler]
+default_pool_size = 15
+max_client_conn = 200
+
 [db.seed]
 enabled = true
 sql_paths = ["./seed/seed.sql"]
+
+[storage.vector]
+enabled = false
 
 [functions.register_member]
 verify_jwt = false

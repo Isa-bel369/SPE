@@ -5,6 +5,7 @@ import { adminCall, friendlyError } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../state/contexts'
 import { dateOnly } from '../../lib/format'
+import { useConfirmDialog } from '../../components/useConfirmDialog'
 
 const PAGE_SIZE = 25
 const columns = ['member_code', 'first_name', 'last_name', 'email', 'phone', 'programme', 'year_of_study', 'created_at', 'total_points']
@@ -25,17 +26,21 @@ function queryRows(filters, ranged = true) {
 }
 
 export default function Registrations() {
+  const { confirm, dialog } = useConfirmDialog()
   const { roles } = useAuth()
   const canDelete = roles.includes('technical_head')
   const [filters, setFilters] = useState({ search: '', programme: '', year: '', sort: 'created_at', ascending: false, page: 0 })
   const [rows, setRows] = useState([]); const [count, setCount] = useState(0)
   const [loading, setLoading] = useState(true); const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [pending, setPending] = useState([])
   const load = useCallback(async () => {
     setLoading(true); setError('')
-    const { data, count: total, error: requestError } = await queryRows(filters)
+    const [{ data, count: total, error: requestError }, pendingResult] = await Promise.all([queryRows(filters), supabase.from('pending_registrations').select('*').order('created_at')])
     if (requestError) setError('Could not load registrations. Check access and retry.')
     else { setRows(data || []); setCount(total || 0) }
+    if (pendingResult.error) setError('Could not load pending applications. Check access and retry.')
+    else setPending(await Promise.all((pendingResult.data || []).map(async (row) => { const { data: signed } = await supabase.storage.from('payment-proofs').createSignedUrl(row.payment_proof_path, 300); return { ...row, proof_url: signed?.signedUrl } })))
     setLoading(false)
   }, [filters])
   useEffect(() => { load() }, [load])
@@ -63,10 +68,15 @@ export default function Registrations() {
     } catch (err) { setError(friendlyError(err, 'Export failed. No file was created. Try again.')) }
   }
   async function deleteMember(row) {
-    if (!window.confirm(`Permanently delete ${row.first_name} ${row.last_name} (${row.member_code}) and their attendance and points?`)) return
+    if (!await confirm({ title: 'Delete member permanently?', message: `Delete ${row.first_name} ${row.last_name} (${row.member_code}) and their attendance and points? This cannot be undone.`, confirmLabel: 'Delete member', danger: true })) return
     try { await adminCall('delete_member', { member_id: row.id }); setNotice('Member deleted.'); load() }
     catch (err) { setError(friendlyError(err, 'Could not delete this member. Try again.')) }
   }
+  async function approveApplication(row) {
+    if (!await confirm({ title: 'Approve registration?', message: `Approve ${row.first_name} ${row.last_name} after reviewing the payment proof? This creates their member ID and emails it to them.`, confirmLabel: 'Approve' })) return
+    try { const result = await adminCall('approve_registration', { registration_id: row.id }); setNotice(result.email_sent ? `Approved ${row.first_name} ${row.last_name}; member ID emailed.` : `Approved ${row.first_name} ${row.last_name}. Email failed; member ID is ${result.member_code}.`); await load() }
+    catch (err) { setError(friendlyError(err, 'Could not approve this registration. Try again.')) }
+  }
   const programmes = ['Petroleum Engineering', 'Natural Gas Engineering', 'Mining Engineering', 'Geological Engineering', 'Geomatics Engineering', 'Mechanical Engineering', 'Electrical and Electronic Engineering', 'Computer Science and Engineering', 'Other']
-  return <section><h1>Registrations</h1><div className="admin-filters"><input aria-label="Search registrations" placeholder="Search name, email or exact member ID" value={filters.search} onChange={(event) => setFilter('search', event.target.value)} /><select value={filters.programme} onChange={(event) => setFilter('programme', event.target.value)}><option value="">All programmes</option>{programmes.map((value) => <option key={value}>{value}</option>)}</select><select value={filters.year} onChange={(event) => setFilter('year', event.target.value)}><option value="">All years</option>{['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Postgraduate'].map((value) => <option key={value}>{value}</option>)}</select><button className="btn secondary" onClick={() => exportFile('csv')}>CSV</button><button className="btn secondary" onClick={() => exportFile('xlsx')}>Excel</button></div>{error && <p className="alert" role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}<p>{count} matching registrations</p>{loading ? <p role="status">Loading registrations…</p> : rows.length ? <div className="table-scroll"><table className="table"><thead><tr>{['Member ID', 'Name', 'Email', 'Phone', 'Programme', 'Year', 'Registered', 'Points', ...(canDelete ? ['Actions'] : [])].map((label, index) => <th key={label}><button className="sort-button" onClick={() => setFilters((state) => ({ ...state, sort: ['member_code', 'first_name', 'email', 'phone', 'programme', 'year_of_study', 'created_at', 'total_points'][index] || state.sort, ascending: !state.ascending }))}>{label}</button></th>)}</tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td>{row.member_code}</td><td>{row.first_name} {row.last_name}</td><td>{row.email}</td><td>{row.phone}</td><td>{row.programme}</td><td>{row.year_of_study}</td><td>{dateOnly(row.created_at)}</td><td>{row.total_points}</td>{canDelete && <td><button className="btn danger" onClick={() => deleteMember(row)}>Delete</button></td>}</tr>)}</tbody></table></div> : <p>No registrations match these filters.</p>}<div className="pagination"><button className="btn secondary" disabled={!filters.page} onClick={() => setFilters((state) => ({ ...state, page: state.page - 1 }))}>Previous</button><span>Page {filters.page + 1} of {Math.max(1, Math.ceil(count / PAGE_SIZE))}</span><button className="btn secondary" disabled={(filters.page + 1) * PAGE_SIZE >= count} onClick={() => setFilters((state) => ({ ...state, page: state.page + 1 }))}>Next</button></div></section>
+  return <section>{dialog}<h1>Registrations</h1><h2>Pending payment review ({pending.length})</h2>{pending.map((row) => <article className="card" key={row.id}><h3>{row.first_name} {row.last_name}</h3><p>{row.email} · {row.phone} · {row.programme}</p><p>Submitted {dateOnly(row.created_at)}</p>{row.proof_url ? <a href={row.proof_url} target="_blank" rel="noreferrer">View payment screenshot</a> : <p>Could not load payment screenshot.</p>}<p><button className="btn" disabled={!row.proof_url} onClick={() => approveApplication(row)}>Approve and issue member ID</button></p></article>)}<div className="admin-filters"><input aria-label="Search registrations" placeholder="Search name, email or exact member ID" value={filters.search} onChange={(event) => setFilter('search', event.target.value)} /><select value={filters.programme} onChange={(event) => setFilter('programme', event.target.value)}><option value="">All programmes</option>{programmes.map((value) => <option key={value}>{value}</option>)}</select><select value={filters.year} onChange={(event) => setFilter('year', event.target.value)}><option value="">All years</option>{['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Postgraduate'].map((value) => <option key={value}>{value}</option>)}</select><button className="btn secondary" onClick={() => exportFile('csv')}>CSV</button><button className="btn secondary" onClick={() => exportFile('xlsx')}>Excel</button></div>{error && <p className="alert" role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}<p>{count} matching registrations</p>{loading ? <p role="status">Loading registrations…</p> : rows.length ? <div className="table-scroll"><table className="table"><thead><tr>{['Member ID', 'Name', 'Email', 'Phone', 'Programme', 'Year', 'Registered', 'Points', ...(canDelete ? ['Actions'] : [])].map((label, index) => <th key={label}><button className="sort-button" onClick={() => setFilters((state) => ({ ...state, sort: ['member_code', 'first_name', 'email', 'phone', 'programme', 'year_of_study', 'created_at', 'total_points'][index] || state.sort, ascending: !state.ascending }))}>{label}</button></th>)}</tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td>{row.member_code}</td><td>{row.first_name} {row.last_name}</td><td>{row.email}</td><td>{row.phone}</td><td>{row.programme}</td><td>{row.year_of_study}</td><td>{dateOnly(row.created_at)}</td><td>{row.total_points}</td>{canDelete && <td><button className="btn danger" onClick={() => deleteMember(row)}>Delete</button></td>}</tr>)}</tbody></table></div> : <p>No registrations match these filters.</p>}<div className="pagination"><button className="btn secondary" disabled={!filters.page} onClick={() => setFilters((state) => ({ ...state, page: state.page - 1 }))}>Previous</button><span>Page {filters.page + 1} of {Math.max(1, Math.ceil(count / PAGE_SIZE))}</span><button className="btn secondary" disabled={(filters.page + 1) * PAGE_SIZE >= count} onClick={() => setFilters((state) => ({ ...state, page: state.page + 1 }))}>Next</button></div></section>
 }
